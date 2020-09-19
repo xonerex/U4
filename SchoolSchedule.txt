@@ -1,0 +1,30 @@
+Fall
+- 4F90 : Bockus - 2hrs seminar per week, freely scheduled
+- 3P92 : Bockus - Computer Architecture [SYNC]
+	Monday  	2:00 - 3:30
+	Thursday 	2:00 - 3:30
+- 4P01 : Software Engineering 1 - Naser [SYNC]
+	Monday		3:30 - 5:00
+	Thursday	3:30 - 5:00
+- 3P93 : Parallel - Robson [SYNC]
+	Wednesday	11:00 - 12:30
+	Friday		11:00 - 12:30
+- 4P14 : Computer Networks - Robson [SYNC]		Lab 1 - Mon 10-12
+	Wednesday	2:00 - 3:30
+	Friday		2:00 - 3:30
+- 4P41 : Functional Programming - Winter [SYNC]
+	Wednesday	3:30 - 5:00	
+	Friday		3:30 - 5:00
+
+Winter
+- 4F90 : Bockus - 2hrs seminar per week, freely scheduled
+- 4P02 : Naser - Software Engineering 2
+	Monday		8:00 - 9:30 AM
+	Thursday	8:00 - 9:30 AM
+- 4P76 : Ombuki - Machine Learning			Tutorial - Tues 4-5
+	Thursday 	11:00 - 2:00
+- 4P78 : Foxwell - Robotics
+	Monday		7:00 - 10:00 PM
+- 3P98 : Graphics - Ross
+	Wednesday	3:30 - 5:00
+	Friday		11:00 - 12:30
