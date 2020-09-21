@@ -6,19 +6,24 @@
 
 #include <iostream>
 #include <string>
+#include <cmath>
 #include <set>
 #include <algorithm>
+#include <unordered_map>
+#include <vector>
+#include <bitset>
 
 // Global vars
-bool verbose = false;
-bool report = false;
-std::string reportFileName;
-std::string expression;
+bool verbose = false;                       // verbose mode flag
+bool report = false;                        // generate report enabled flag
+std::string reportFileName;                 // filename of report
+std::string expression;                     // boolean expression
+std::unordered_map<char, int> varMap;       // mapping from expression variable labels to variable values for evaluation
 
 // Function prototypes
-std::string extractVars(std::string ex);                        // extract all unique variables in input expression and return as reverse sorted string
+std::string processExp(std::string ex);                         // process expression - extract all unique variables in input expression and return as reverse sorted string
 int hammingDistance(std::string imp1, std::string imp2);        // calculates hamming distance between two provided implicant
-int numBitsHigh(std::string imp);                               // returns number of high bits in implicant (ie. 101 = 2 high bits)
+inline int numBitsHigh(std::string imp);                               // returns number of high bits in implicant (ie. 101 = 2 high bits)
 
 
 /*
@@ -98,8 +103,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Local vars
-    std::string varList;        // list of unique variables found in expression
-    int numvars = 0;
+    const int MAXBITS = 26;                         // maximum bits = maximum # of variables allowed -> 26 alphabetic characters = 26 maximum bits
+    std::string varList;                            // list of unique variables found in expression
+    int numvars = 0;                                // number of unique bits (variables) represented in expression
+    int ttRows, ttCols;                             // truth table dimensions
+    std::vector<std::string> implicants;            // list of implicants   [minterms = inputs that evaluate to 1]
+    std::vector<std::vector<std::string>> impTable; // table of implicant groupings
 
     if (verbose) {
         if (report) std::cout << "Report file will be generated as " << reportFileName << std::endl;
@@ -107,8 +116,8 @@ int main(int argc, char* argv[]) {
         std::cout << "\nAnalyzing expression: " << expression << '\n';
     }
 
-    // 1) Get list of variables in expression
-    varList = extractVars(expression);  
+    // 1) Parse, process, and validate expression
+    varList = processExp(expression);  
     numvars = varList.length();    
     if (varList == "") {                    // validate varList/boolean expression
         std::cerr << "Invalid boolean expression \"" << expression << "\": No variables found.\n\
@@ -118,9 +127,10 @@ int main(int argc, char* argv[]) {
                 A+B = A OR B\n\t\
                 AB = A AND B\n\t\
                 a = NOT A\n";
+        return -1;
     }
     if (verbose) {
-        std::cout << numvars << " Variables in expression: ";
+        std::cout << numvars << " variables in expression: ";
         for (char const& c : varList) {
             std::cout << c << " ";
         }
@@ -128,28 +138,100 @@ int main(int argc, char* argv[]) {
     }
 
     // 2) Construct truth table from expression vars
-    //      width = # vars + 1 (vars + output [f])
-    //      height = # combinations of var states = 2 ^ # vars
+    //      width [cols] = # vars + 1 (vars + output [f])
+    //      height [rows] = # combinations of var states = 2 ^ # vars
+    ttRows = std::pow(2.0, numvars);
+    ttCols = numvars + 1;
+    std::string bits;
+    char label, value;
+    int evalBuffer, sum, fetched; 
+    bool invert;
+
+    if (verbose) {
+        std::cout << "Generating truth table of size " << ttRows << " rows by " << ttCols << " columns.\n";
+        for (auto c : varList) std::cout << c << ' ';
+        std::cout << "| f\n";
+    }
+    for (int i=0; i < ttRows; i++) {    // iterate all combinations of bits
+        bits = std::bitset<MAXBITS>(i).to_string();             // convert i value to binary representation as string padded to max bits
+        bits = bits.substr((MAXBITS - numvars), MAXBITS);       // trim padding
+        for (int j=0; j < numvars; j++) {                       // set var values in varMap
+            label = varList[j];
+            value = bits[j];
+            if (verbose) std::cout << value << ' ';
+            varMap[label] = (value == '1' ? 1 : 0);          
+        }
+    
+        // evaluate expression
+        evalBuffer = -1;
+        sum = 0;
+        for (char c : expression) {
+            if (c == '+') {
+                sum += evalBuffer;                                          // perform "OR"
+                evalBuffer = -1;
+                continue;
+            } 
+            invert = false;
+            if (islower(c)) {
+                invert = true;                                              // mark negation
+                c = toupper(c);                                             // remove NOT distinction for map lookup
+            }
+            fetched = varMap.at(c);
+            if (invert) fetched = (fetched == 1 ? 0 : 1);                   // perform negation           
+            if (evalBuffer == -1) evalBuffer = fetched;
+            else evalBuffer *= fetched;                                     // perform "AND"
+        }
+        sum += evalBuffer;
+        if (sum > 0) {              // if inputs produce a 1, inputs represent an implicant of boolean expression
+            sum = 1;
+            implicants.push_back(bits);
+        }
+        if (verbose) std::cout << "| " << sum << '\n';
+    }
+
+    // 3) Process implicants iteratively to reduce to prime implicants. 
+    //      Order them in increasing order of high bits (ie. 001 = 1 high bit, 101 = 2 high bits, etc...).
+    //      Starting with the first implicant in group 0, find for each implicant another implicant with a hamming distance of 0
+    //          -> If implicant i is in group n, then implicant j with hamming distance of 1 to i must be in group n+1. 
+    //          -> For each implicant in group n, compare against each implicant in group n+1
 
     return 0;
 }
 
-std::string extractVars(std::string ex) {
+std::string processExp(std::string ex) {
     std::string varList = "";
     std::set<char> vars;
     char var;
 
-    for (char const& c : ex) {      // iterate expression
+    for (char const& c : ex) {      // iterate expression and filter out vars into set [O(nlogn)]
         if (isalpha(c)) {               // consider only alphumeric characters as vars
             var = toupper(c);           // remove NOT distinction from all vars
             vars.insert(var);
         }
+        else if (c != '+') {        // validate non alphabetic characters
+            std::cerr << "Invalid boolean expression \"" << expression << "\": \"" << c << "\" is neither a valid variable or operator.\n\
+                Expression must be of the form AB+AC+bC+...\n\
+                Variables must be alphabetic [A-Z] and are limited to a single character.\n\
+                Expression syntax:\n\t\
+                    A+B = A OR B\n\t\
+                    AB = A AND B\n\t\
+                    a = NOT A\n";
+            exit(EXIT_FAILURE);
+        }
     }
     for (auto v : vars) {           // iterate expressions in set and add to list
-        varList += v;
+        var = v;
+        varList += var;
     }
-
-    std::sort(varList.begin(), varList.end(), std::greater<char>());      // sort vars in decreasing order (ie. BCDA -> DBCA)
+    std::sort(varList.begin(), varList.end(), std::greater<char>());      // sort vars in decreasing order (ie. BCDA -> DBCA) [O(nlogn)]
 
     return varList;
+}
+
+inline int numBitsHigh(std::string imp) {
+    int count = 0;
+    for (char c : imp) {
+        if (c == '1') count++;
+    }
+    return count;
 }
