@@ -21,9 +21,9 @@ std::string expression;                     // boolean expression
 std::unordered_map<char, int> varMap;       // mapping from expression variable labels to variable values for evaluation
 
 // Function prototypes
-std::string processExp(std::string ex);                         // process expression - extract all unique variables in input expression and return as reverse sorted string
-int hammingDistance(std::string imp1, std::string imp2);        // calculates hamming distance between two provided implicant
-inline int numBitsHigh(std::string imp);                               // returns number of high bits in implicant (ie. 101 = 2 high bits)
+std::string processExp(std::string ex);                                 // process expression - extract all unique variables in input expression and return as reverse sorted string
+inline int hammingDistance(std::string imp1, std::string imp2);         // calculates hamming distance between two provided implicant
+inline int numBitsHigh(std::string& imp);                               // returns number of high bits in implicant (ie. 101 = 2 high bits)
 
 
 /*
@@ -107,8 +107,6 @@ int main(int argc, char* argv[]) {
     std::string varList;                            // list of unique variables found in expression
     int numvars = 0;                                // number of unique bits (variables) represented in expression
     int ttRows, ttCols;                             // truth table dimensions
-    std::vector<std::string> implicants;            // list of implicants   [minterms = inputs that evaluate to 1]
-    std::vector<std::vector<std::string>> impTable; // table of implicant groupings
 
     if (verbose) {
         if (report) std::cout << "Report file will be generated as " << reportFileName << std::endl;
@@ -146,6 +144,7 @@ int main(int argc, char* argv[]) {
     char label, value;
     int evalBuffer, sum, fetched; 
     bool invert;
+    std::vector<std::string> implicants;            // list of implicants   [minterms = inputs that evaluate to 1]
 
     if (verbose) {
         std::cout << "Generating truth table of size " << ttRows << " rows by " << ttCols << " columns.\n";
@@ -181,7 +180,7 @@ int main(int argc, char* argv[]) {
             if (evalBuffer == -1) evalBuffer = fetched;
             else evalBuffer *= fetched;                                     // perform "AND"
         }
-        sum += evalBuffer;
+        sum += evalBuffer;          // add trailing expression(s)
         if (sum > 0) {              // if inputs produce a 1, inputs represent an implicant of boolean expression
             sum = 1;
             implicants.push_back(bits);
@@ -191,9 +190,66 @@ int main(int argc, char* argv[]) {
 
     // 3) Process implicants iteratively to reduce to prime implicants. 
     //      Order them in increasing order of high bits (ie. 001 = 1 high bit, 101 = 2 high bits, etc...).
-    //      Starting with the first implicant in group 0, find for each implicant another implicant with a hamming distance of 0
+    //      Starting with the first implicant in group 0, find for each implicant another implicant with a hamming distance of 1
     //          -> If implicant i is in group n, then implicant j with hamming distance of 1 to i must be in group n+1. 
     //          -> For each implicant in group n, compare against each implicant in group n+1
+    //      Mark each matched implicant. Combine implicants by replacing differing bit with a '-' representing a dont care state. Add this new implicant to a "matched" list.
+    //      Stop once all implicants in group M-1 have been processed, where M = the max group.
+    //      Process all implicants in table, any implicants that havent been marked (matched), are prime implicants. Add them to the prime implicants list.
+    //      Check to see if matched list is empty. If not, implicant list = matched list, matched list = {}, and repeat this process
+    
+    std::vector<std::string>                pImp;           // prime implicant list
+    std::vector<std::vector<std::string>>   impTable;       // table of implicant groupings --> row index = group number, stores bits in row
+    std::vector<std::string>                matched;        // list of matched implicants
+    std::unordered_map<std::string, char>   matchMap;       // maps bits (key) to matched state (true/false) 
+    int group = 0;
+    int toPad = 0;
+    const int minSpacesForBinary = 6;
+    int spacesForBinary = 0;
+    std::string padText, padText2;
+
+    if (verbose) {
+        std::cout << "\nCalculating prime implicants.\n"; 
+        padText2 = "";
+        spacesForBinary = numvars - minSpacesForBinary;
+        if (spacesForBinary < 0) {
+            for (int i=0; i < (-1*spacesForBinary); i++) padText2 += ' ';
+            spacesForBinary = 0;
+        }
+    }
+    
+    while (true) {
+        // populate implicant table from implicant list
+        for (int i=0; i < implicants.size(); i++) {
+            toPad = 0;
+            bits = implicants[i];                           // fetch implicant
+            group = numBitsHigh(bits);                      // calculate group number
+            toPad = (group - impTable.size()) + 1;          // calc rows to add
+            if (toPad > 0) {                                // must pad on rows
+                for (int rows=0; rows < toPad; rows++) impTable.push_back(std::vector<std::string>());       
+            }
+            impTable[group].push_back(bits);
+            matchMap[bits] = ' ';
+        }
+
+        // matchmaking
+
+
+        if (verbose) {
+            std::cout << "\nGroup | Binary";
+            for (int i=0; i < spacesForBinary; i++) std::cout << ' ';
+            std::cout << " | Matched?\n";
+            for (int g=0; g < impTable.size(); g++) {       // iterate groups
+            padText = (g < 10 ? "     " : "    ");
+                for (int im=0; im < impTable[g].size(); im++) {     // iterate implicants in group
+                    std::cout << g << padText << "| " << impTable[g][im] << padText2 << " | " << matchMap[impTable[g][im]] << std::endl;
+                }
+            }
+        }
+        if (matched.size() == 0) break;     // all prime implicants found --> exit
+        // migrate matched list to implicant list for implicant table population
+        matchMap.erase(matchMap.begin(), matchMap.end());       // empty match map for next iteration
+    }
 
     return 0;
 }
@@ -228,10 +284,19 @@ std::string processExp(std::string ex) {
     return varList;
 }
 
-inline int numBitsHigh(std::string imp) {
+inline int numBitsHigh(std::string& imp) {
     int count = 0;
     for (char c : imp) {
         if (c == '1') count++;
     }
     return count;
+}
+
+inline int hammingDistance(std::string imp1, std::string imp2) {    
+    // Assumes imp1 and imp2 are of equal length
+    int dist = 0;
+    for (int i=0; i < imp1.length(); i++) {
+        if (imp1[i] != imp2[i]) dist++;
+    }
+    return dist;
 }

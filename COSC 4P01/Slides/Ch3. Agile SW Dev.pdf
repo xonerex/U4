@@ -1,0 +1,26 @@
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        </head>
+    <body onload="document.forms[0].submit()">
+        <noscript>
+            <p>
+                <strong>Note:</strong> Since your browser does not support JavaScript,
+                you must press the Continue button once to proceed.
+            </p>
+        </noscript>
+        
+        <form action="https&#x3a;&#x2f;&#x2f;adfs.brocku.ca&#x2f;adfs&#x2f;ls&#x2f;" method="post">
+            <div>
+                                
+                <input type="hidden" name="SAMLRequest" value="PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHNhbWwycDpBdXRoblJlcXVlc3QgQXNzZXJ0aW9uQ29uc3VtZXJTZXJ2aWNlVVJMPSJodHRwczovL2xtcy5icm9ja3UuY2Evc2FrYWktbG9naW4tdG9vbC9jb250YWluZXIvc2FtbC9TU08iIERlc3RpbmF0aW9uPSJodHRwczovL2FkZnMuYnJvY2t1LmNhL2FkZnMvbHMvIiBGb3JjZUF1dGhuPSJmYWxzZSIgSUQ9ImExMjg5Z2JkaDlkaDlkNmczOWFjMTU5aWYwZ2o2aTgiIElzUGFzc2l2ZT0iZmFsc2UiIElzc3VlSW5zdGFudD0iMjAyMC0wOS0yMlQwMDoyNjo0OC4xMTJaIiBQcm90b2NvbEJpbmRpbmc9InVybjpvYXNpczpuYW1lczp0YzpTQU1MOjIuMDpiaW5kaW5nczpIVFRQLVBPU1QiIFZlcnNpb249IjIuMCIgeG1sbnM6c2FtbDJwPSJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6cHJvdG9jb2wiPjxzYW1sMjpJc3N1ZXIgeG1sbnM6c2FtbDI9InVybjpvYXNpczpuYW1lczp0YzpTQU1MOjIuMDphc3NlcnRpb24iPmh0dHBzOi8vc2FrYWktcHJvZC5zYW1sLmJyb2NrLmVkdS9zYW1sYXV0aDwvc2FtbDI6SXNzdWVyPjwvc2FtbDJwOkF1dGhuUmVxdWVzdD4="/>                
+                                
+            </div>
+            <noscript>
+                <div>
+                    <input type="submit" value="Continue"/>
+                </div>
+            </noscript>
+        </form>
+            </body>
+</html>
