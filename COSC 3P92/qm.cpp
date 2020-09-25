@@ -16,15 +16,17 @@
 // Global vars
 bool verbose = false;                       // verbose mode flag
 bool report = false;                        // generate report enabled flag
+std::string inputMode;                      // input mode -> exp = expression, func = function, list = implicant list
 std::string reportFileName;                 // filename of report
 std::string expression;                     // boolean expression
 std::unordered_map<char, int> varMap;       // mapping from expression variable labels to variable values for evaluation
 
 // Function prototypes
-std::string processExp(std::string ex);                         // process expression - extract all unique variables in input expression and return as reverse sorted string
-int hammingDistance(std::string imp1, std::string imp2);        // calculates hamming distance between two provided implicant
-inline int numBitsHigh(std::string imp);                               // returns number of high bits in implicant (ie. 101 = 2 high bits)
-
+std::string processExp(std::string ex);                                 // process expression - extract all unique variables in input expression and return as reverse sorted string
+inline int hammingDistance1(std::string imp1, std::string imp2);        // calculates hamming distance between two provided implicants. IF that distance = 1, then return the index of the differing character, otherwise return -1
+inline int numBitsHigh(std::string& imp);                               // returns number of high bits in implicant (ie. 101 = 2 high bits)
+inline bool matchesPrimePattern(const std::string& imp, const std::string& prime);      // compares an implicant against the pattern of a prime implicant and returns true if it matches
+std::string bitsToVars(std::string& bits, std::string& varList);        // converts bits in string form to their variable representation
 
 /*
     This program takes a boolean expression in the form of "AB+AC+bC+...",
@@ -39,23 +41,28 @@ inline int numBitsHigh(std::string imp);                               // return
         AB = A AND B
         a = NOT A
 
-    Usage: qm AB+AC+bC+... verbose generatereport outputfile.txt
-    *Note: boolean expression must be provided as the first argument
-    *Note: variables in expression are limited to a single character (ie. AB is two variables, A and B)
-    *Note: variables must be alphabetic, limiting this program to a maximum of 26 unique vars
+    Usage: qm exp AB+AC+bC+... verbose generatereport outputfile.txt
+    *Note: input mode and input must be provided as the first second arguments respectively.
+    *Note: there can be no spaces in input, ie. 'Abc+aCd' not 'ABC + aCd'.
+    *Note: variables in expression are limited to a single character (ie. AB is two variables, A and B).
+    *Note: variables must be alphabetic, limiting this program to a maximum of 26 unique vars.
+
+    Alternative modes input:
+        - func: F(A,B,C,D)=(M1,M2,M3,M6) -> 4 inputs (A,B,C,D) and implicants (minterms) 1=0001, 2=0010, 3=0011, 6=0110
+        - list: List of implicants -> 0010,1100,1110,0111,1011,etc...
 */
 
 
 int main(int argc, char* argv[]) {
     // Validate argument count
-    if (argc < 2) {
-        std::cerr << "Invalid Input. Boolean Expression Required.\nie. qm AB+AC+B'C\n";
+    if (argc < 3) {
+        std::cerr << "Invalid Input. Input Mode and Input Representation Required.\nie. qm exp AB+AC+B'C\n";
         return -1;
     }
-    else if (argc > 5) {        // max 5 args -> program name is first, -o and filename require 2
+    else if (argc > 6) {        // max 5 args -> program name is first, -o and filename require 2
         std::cerr << "Invalid Input. Too many arguments provided.\n\
             Valid arguments are:\n\t\
-                1) A boolean expression - ie. AB+AC+B^C\n\t\
+                1) input - ie. exp AB+AC+B^C\n\t\
                 2) \"verbose\" - Enable verbose mode\n\t\
                 3) \"generatereport\" - Write reduction report file, ie. generatereport reportFile.txt\n\
             Usage: qm AB+AC+bC verbose generatereport outputfile.txt\n\
@@ -71,9 +78,19 @@ int main(int argc, char* argv[]) {
     // Validate argument contents
     std::string arg;
 
-    expression = std::string(argv[1]);
+    inputMode = std::string(argv[1]);
+    expression = std::string(argv[2]);
 
-    for (int i = 2; i < argc; i++) {
+    if (inputMode != "exp" && inputMode != "list" && inputMode != "func") {
+        std::cerr << "Invalid Input Mode.\n\
+            Valid modes of input are:\n\t\
+                1) exp  - Input is expressed as a boolean expression, ie. qm exp AB+AC+B^C\n\t\
+                2) list - Input is expressed as a list of implicants, ie. qm list 0010,1100,1110,1011,etc...\n\t\
+                3) func - Input is expressed as a function, ie. qm func F(A,B,C,D)=(M1,M2,M3,M6)\n";
+        return -1;
+    }
+
+    for (int i = 3; i < argc; i++) {
         arg = std::string(argv[i]);
         if (arg.compare("verbose") == 0) {                  // check for verbose mode
             verbose = true;
@@ -103,17 +120,99 @@ int main(int argc, char* argv[]) {
     }
 
     // Local vars
+    // -------------
+    // 1)
     const int MAXBITS = 26;                         // maximum bits = maximum # of variables allowed -> 26 alphabetic characters = 26 maximum bits
     std::string varList;                            // list of unique variables found in expression
     int numvars = 0;                                // number of unique bits (variables) represented in expression
     int ttRows, ttCols;                             // truth table dimensions
-    std::vector<std::string> implicants;            // list of implicants   [minterms = inputs that evaluate to 1]
-    std::vector<std::vector<std::string>> impTable; // table of implicant groupings
+    // 2)
+    std::string bits;
+    char label, value;
+    int evalBuffer, sum, fetched; 
+    bool invert;
+    std::vector<std::string> implicants, implicants_orig;   // list of implicants and backup  [minterms = inputs that evaluate to 1]
+    // 3)
+    std::vector<std::vector<std::string>>   impTable;       // table of implicant groupings --> row index = group number, stores bits in row
+    std::set<std::string>                   matched;        // set of all matched implicants
+    std::vector<std::string>                primes;         // list of prime implicants  
+    std::unordered_map<std::string, char>   matchMap;       // maps bits (key) to matched state (true/false) 
+    int group = 0;
+    int toPad = 0;
+    const int minSpacesForBinary = 6;                       // console formatting vars
+    int spacesForBinary = 0;
+    std::string padText, padText2;
+    std::string matchString;
+    int dontCareBitIndex = 0;
+    int passNum = 1;
+    // 4)
+    std::unordered_map<std::string,std::vector<int>>    columnCntMap;       // maps implicant to count of matches in column, and the indices of each corresponding row (ie. "1101" -> [2,0,3] = 1101 has 2 matches along rows 0 and 3)
+    std::set<std::string>                               minCover;           // minimal primes that cover input expression (function) 'f'                        
+    std::string cellSpaces = "";                                            // console formatting var
+    std::string prime;
+    bool patternMatch;
+    std::vector<int> tmp;
+    // 5)
+    int cnt = 0;
+
+
+    // process input for list input then jump to step 3
+    if (inputMode == "list") {      // process list into implicants and implicants_orig vector, set numvars, construct varList w/ generic labels
+        bits = "";
+        numvars = 0;
+        cnt = 0;                    // use to validate implicants
+        bool stillCounting = true;  // stop counting number of vars after first ',' encountered
+        varList = "";
+        std::cout << std::endl;
+        for (char c : expression) {
+            if (c == ',') {
+                stillCounting = false;    
+                if (cnt != numvars) {
+                    std::cerr << "Invalid list format! Implicants in list must be of uniform length.\n";
+                    std::cerr << "Error encountered at index " << cnt << ": '" << c << "' found." << std::endl;
+                    return -1;
+                }        
+                if (verbose) std::cout << "Identified implicant " << bits << '\n';
+                implicants.push_back(bits);
+                implicants_orig.push_back(bits);
+                bits = "";
+                cnt = 0;
+                continue;
+            }
+            else if (c != '0' && c != '1') {
+                std::cerr << "Invalid token '" << c << "' encountered at index " << cnt << std::endl;
+                std::cerr << "Implicants in list may only consist of boolean digits (0 or 1).\n";
+                return -1;
+            }
+            else if (stillCounting) {                       // count vars and construct var list for first implicant in list
+                varList = char(numvars + 'A') + varList;
+                numvars++;
+            }
+            bits += c;      // add char to bits string
+            cnt++;
+        }
+        if (cnt != numvars) {
+            std::cerr << "Invalid list format! Implicants in list must be of uniform length.\n";
+            std::cerr << "Error encountered at index " << cnt << std::endl;
+            return -1;
+        }  
+        if (verbose) std::cout << "Identified implicant " << bits << '\n';
+        implicants.push_back(bits);
+        implicants_orig.push_back(bits);
+
+        goto step3;     // perform unconditional jump
+    }
 
     if (verbose) {
         if (report) std::cout << "Report file will be generated as " << reportFileName << std::endl;
         else std::cout << "No report file will be generated.\n";
-        std::cout << "\nAnalyzing expression: " << expression << '\n';
+        std::cout << "\nExpression: " << expression << " = ";
+        for (char c : expression) {
+            if (islower(c)) std::cout << char(toupper(c)) << '\'';
+            else if (c == '+') std::cout << " + ";
+            else std::cout << c;
+        }
+        std::cout << std::endl;
     }
 
     // 1) Parse, process, and validate expression
@@ -129,26 +228,15 @@ int main(int argc, char* argv[]) {
                 a = NOT A\n";
         return -1;
     }
-    if (verbose) {
-        std::cout << numvars << " variables in expression: ";
-        for (char const& c : varList) {
-            std::cout << c << " ";
-        }
-        std::cout << std::endl;
-    }
 
     // 2) Construct truth table from expression vars
     //      width [cols] = # vars + 1 (vars + output [f])
     //      height [rows] = # combinations of var states = 2 ^ # vars
     ttRows = std::pow(2.0, numvars);
     ttCols = numvars + 1;
-    std::string bits;
-    char label, value;
-    int evalBuffer, sum, fetched; 
-    bool invert;
 
     if (verbose) {
-        std::cout << "Generating truth table of size " << ttRows << " rows by " << ttCols << " columns.\n";
+        std::cout << "\nTruth table:\n";
         for (auto c : varList) std::cout << c << ' ';
         std::cout << "| f\n";
     }
@@ -181,19 +269,179 @@ int main(int argc, char* argv[]) {
             if (evalBuffer == -1) evalBuffer = fetched;
             else evalBuffer *= fetched;                                     // perform "AND"
         }
-        sum += evalBuffer;
+        sum += evalBuffer;          // add trailing expression(s)
         if (sum > 0) {              // if inputs produce a 1, inputs represent an implicant of boolean expression
             sum = 1;
             implicants.push_back(bits);
+            implicants_orig.push_back(bits);
         }
         if (verbose) std::cout << "| " << sum << '\n';
     }
 
+    step3:
     // 3) Process implicants iteratively to reduce to prime implicants. 
     //      Order them in increasing order of high bits (ie. 001 = 1 high bit, 101 = 2 high bits, etc...).
-    //      Starting with the first implicant in group 0, find for each implicant another implicant with a hamming distance of 0
+    //      Starting with the first implicant in group 0, find for each implicant another implicant with a hamming distance of 1
     //          -> If implicant i is in group n, then implicant j with hamming distance of 1 to i must be in group n+1. 
     //          -> For each implicant in group n, compare against each implicant in group n+1
+    //      Mark each matched implicant. Combine implicants by replacing differing bit with a '-' representing a dont care state. Add this new implicant to a "matched" list.
+    //      Stop once all implicants in group M-1 have been processed, where M = the max group.
+    //      Process all implicants in table, any implicants that havent been marked (matched), are prime implicants. Add them to the prime implicants list.
+    //      Check to see if matched list is empty. If not, implicant list = matched list, matched list = {}, and repeat this process
+
+    if (verbose) {
+        std::cout << "\nCalculating prime implicants ['-' indicates dont care state].\n\nBase Implicant Table:\n"; 
+        padText2 = "";
+        spacesForBinary = numvars - minSpacesForBinary;
+        if (spacesForBinary < 0) {
+            for (int i=0; i < (-1*spacesForBinary); i++) padText2 += ' ';
+            spacesForBinary = 0;
+        }
+    }
+    
+    while (true) {
+        // populate implicant table from implicant list
+        for (int i=0; i < implicants.size(); i++) {
+            toPad = 0;
+            bits = implicants[i];                           // fetch implicant
+            group = numBitsHigh(bits);                      // calculate group number
+            toPad = (group - impTable.size()) + 1;          // calc rows to add
+            if (toPad > 0) {                                // must pad on rows
+                for (int rows=0; rows < toPad; rows++) impTable.push_back(std::vector<std::string>());       
+            }
+            impTable[group].push_back(bits);
+            matchMap[bits] = ' ';
+        }
+
+        // matchmaking
+        for (int grp=0; grp < (impTable.size()-1); grp++) {         // iterate groups 0..(N-1) in implicant table
+            for (std::string imp : impTable[grp]) {                 // iterate implicants in current group
+                for (std::string imp2 : impTable[grp+1]) {          // compare imp against all implicants in group grp+1
+                    dontCareBitIndex = hammingDistance1(imp, imp2);
+                    if (dontCareBitIndex != -1) {       // hamming distance of 1 -> matched
+                        matchMap[imp] = '*';            // mark both as matched in table
+                        matchMap[imp2] = '*';       
+                        matchString = std::string(imp);         // construct matched string by replacing differing character with a dont care bit ('-')
+                        matchString[dontCareBitIndex] = '-';
+                        matched.insert(matchString);            // using a set removes possibility of redundancy    
+                    }
+                }
+                if (matchMap.at(imp) == ' ') {      // couldnt find a match in group grp+1 --> must be prime
+                    matchMap[imp] = 'p';
+                    primes.push_back(imp);
+                }
+            }
+        }
+        for (std::string imp : impTable[impTable.size()-1]) {       // any implicants that haven't been matched in last group must be prime
+            if (matchMap.at(imp) == ' ') {
+                matchMap[imp] = 'p';
+                primes.push_back(imp);
+            }
+        }
+
+        if (verbose) {
+            std::cout << "| Group | Binary";
+            for (int i=0; i < spacesForBinary; i++) std::cout << ' ';
+            std::cout << " | Matched?\n";
+            for (int g=0; g < impTable.size(); g++) {       // iterate groups
+            padText = (g < 10 ? "     " : "    ");
+                for (int im=0; im < impTable[g].size(); im++) {     // iterate implicants in group
+                    std::cout << "| " << g << padText << "| " << impTable[g][im] << padText2 << " | " << matchMap[impTable[g][im]] << std::endl;
+                }
+            }
+        }
+
+        if (matched.size() == 0) break;     // no matches = all prime implicants found --> exit
+
+        implicants.erase(implicants.begin(), implicants.end());     // transition matched items to new implicant list then erase set for next iteration
+        for (std::string imp : matched) implicants.push_back(imp);  
+        matched.erase(matched.begin(), matched.end());
+        matchMap.erase(matchMap.begin(), matchMap.end());           // empty match map for next iteration
+        impTable.erase(impTable.begin(), impTable.end());           // empty implicant table for next iteration
+        if (verbose) {
+            std::cout << '\n' << passNum;
+            std::cout << (passNum == 1 ? "st" : (passNum == 2 ? "nd" : (passNum == 3 ? "rd" : "th")));
+            std::cout << " Pass:" << std::endl;
+            passNum++;
+        }
+    }
+
+    if (verbose) {
+        std::cout << "\nPrime implicants are: ";
+        for (std::string p : primes) std::cout << '\'' << p << "', ";
+        std::cout << std::endl;
+    }
+
+    // 4) Generate output table
+    //      Place Prime implicants along y-axis, initial implicants along x-axis
+    //      Compare each original implicant against each prime implicant. 
+    //      If the prime implicant successfully describes the implicant (taking into account 
+    //          dont care states [ie. dont care about them]) then a true is generated at the 
+    //          corresponding cell in the table.
+    //      For each implicant with only a single check mark in its corr. column, then the 
+    //          prime implicant in the corr. row is necessary and will be included in the final 
+    //          reduction
+
+    if (verbose)
+    {
+        // Write headers
+        std::cout << "\nOutput Table:\n";
+        for (int i=0; i < (numvars+2); i++) cellSpaces += ' ';
+        std::cout << "|" << cellSpaces << "|";
+        for (int i=0; i < implicants_orig.size(); i++) {
+            std::cout << ' ' << implicants_orig[i] << " |";
+        } 
+        std::cout << '\n';
+    }
+
+    // prime count values in columnCntMap
+    tmp.push_back(0);
+    for (auto imp : implicants_orig) columnCntMap[imp] = tmp;
+
+    // construct output table
+    for (int p=0; p < primes.size(); p++) {         // iterate each prime implicant to construct table
+        prime = primes[p];
+        if (verbose) std::cout << "| " << prime << " |";
+        for (auto imp : implicants_orig) {                      // iterate original implicants (columns)
+            patternMatch = matchesPrimePattern(imp, prime);
+            if (patternMatch){
+                columnCntMap[imp][0]++;                             // update the match count and add corr. row index
+                columnCntMap[imp].push_back(p);
+            }
+            if (verbose) {
+                if (patternMatch) std::cout << " *" << cellSpaces.substr(2) << '|';
+                else std::cout << cellSpaces << '|';
+            } 
+        }
+        if (verbose) std::cout << std::endl;
+    }
+
+    // check counts for each original implicant
+    if (verbose) std::cout << "\nPrime implicants required for minimal cover: ";
+    for (auto imp : implicants_orig) {
+        if (columnCntMap.at(imp)[0] == 1) {     // if there is a single checkmark in column, add corr. prime implicant to minCover set
+            prime = primes[columnCntMap.at(imp)[1]];
+            minCover.insert(prime);
+        }
+    }
+    
+    // 5) Convert prime implicants in minimal cover set beck to initial variables and output reduced expression
+    expression = "";   
+    cnt = 0;   
+    for (std::string prime : minCover) {
+        if (verbose) std::cout << '\'' << prime << "', ";
+        if (cnt != 0) expression += '+';
+        expression += bitsToVars(prime, varList);
+        cnt++;
+    }
+    if (verbose) std::cout << std::endl;
+    std::cout << "\nReduced Expression: " << expression << " = ";       // final result is output regardless of verbose mode status
+    for (char c : expression) {
+        if (islower(c)) std::cout << char(toupper(c)) << '\'';
+        else if (c == '+') std::cout << " + ";
+        else std::cout << c;
+    }
+    std::cout << '\n' << std::endl;
 
     return 0;
 }
@@ -223,15 +471,49 @@ std::string processExp(std::string ex) {
         var = v;
         varList += var;
     }
-    std::sort(varList.begin(), varList.end(), std::greater<char>());      // sort vars in decreasing order (ie. BCDA -> DBCA) [O(nlogn)]
+    std::sort(varList.begin(), varList.end(), std::greater<char>());      // sort vars in decreasing order (ie. BDAC -> DBCA) [O(nlogn)]
 
     return varList;
 }
 
-inline int numBitsHigh(std::string imp) {
+inline int numBitsHigh(std::string& imp) {
     int count = 0;
     for (char c : imp) {
         if (c == '1') count++;
     }
     return count;
+}
+
+inline int hammingDistance1(std::string imp1, std::string imp2) {    
+    // Assumes imp1 and imp2 are of equal length
+    int dist = 0;
+    int index = -1;
+    for (int i=0; i < imp1.length(); i++) {
+        if (imp1[i] != imp2[i]) {
+            dist++;
+            index = i;
+        }
+    }
+    if (dist != 1) index = -1;
+    return index;
+}
+
+inline bool matchesPrimePattern(const std::string& imp, const std::string& prime) {
+    // assumes prime and implicant are of same length
+    for (int i=0; i < imp.length(); i++) {
+        if (prime[i] == '-')    continue;           // dont care state -> automatic character match
+        if (imp[i] != prime[i]) return false;       // mismatch -> return false
+    }
+    return true;
+}
+
+std::string bitsToVars(std::string& bits, std::string& varList) {
+    // assumes bits and varList are of equal length
+    std::string result = "";
+    for (int i=0; i < bits.length(); i++) {
+        if (bits[i] == '-') continue;       // pass vars corr. to dont care states
+        if (bits[i] == '1') result = varList[i] + result;
+        else result = char(tolower(varList[i])) + result;
+    }
+    return result;
 }
