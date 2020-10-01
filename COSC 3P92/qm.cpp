@@ -203,6 +203,26 @@ int main(int argc, char* argv[]) {
         goto step3;     // perform unconditional jump
     }
 
+    // process input for function input mode then jump to step 3
+    if (inputMode == "func") {
+        bits = "";
+        numvars = 0;
+        varList = "";
+        cnt = 0;
+
+        for (char c : expression) {
+            if (cnt == 0 && c != 'F') {
+                std::cerr << "Invalid Function Format. Function must begin with 'F'. '" << c << "' Found Instead.\n";
+                return -1;
+            }
+            else if (cnt == 1 && c != '(') {
+                std::cerr << "Invalid Function Format. Expected token '('. '" << c << "' Found Instead.\n";
+                return -1;
+            }
+        }
+        goto step3;
+    }
+
     if (verbose) {
         if (report) std::cout << "Report file will be generated as " << reportFileName << std::endl;
         else std::cout << "No report file will be generated.\n";

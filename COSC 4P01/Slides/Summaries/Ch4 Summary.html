@@ -1,0 +1,334 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+<title>CS 410/510 - Software Engineering class notes</title>
+<link rel="stylesheet" type="text/css" href="Ch4%20Summary_files/notes.css">
+</head>
+
+<body>
+
+<div class="SimpleTitle">
+
+<p>CS 410/510 - Software Engineering</p>
+<p>Requirements Engineering</p>
+
+</div>
+
+<div class="Content">
+
+<p>Reference: Sommerville, Software Engineering, 10 ed., Chapter 4</p>
+
+
+<div class="Underhead">
+<p>The big picture</p></div>
+
+
+<p><b>Requirements engineering</b> (RE) is the process of establishing 
+the services that the customer requires from a system and the 
+constraints under which it operates and is developed.
+The <b>requirements</b> themselves are the descriptions of the system 
+services and constraints that are generated during the requirements 
+engineering process. Requirements may range from a high-level abstract 
+statement of a service or of a system constraint to a detailed 
+mathematical functional specification. As much as possible, requirements
+ should describe <b>what</b> the system should do, but <b>not how</b> it should do it.
+</p>
+
+<p>Two kinds of requirements based on the intended purpose and target audience:</p>
+<dl>
+	<dt>User requirements</dt>
+	<dd>High-level abstract requirements written as statements, in a 
+natural language plus diagrams, of what services the system is expected 
+to provide to system users and the constraints under which it must 
+operate.</dd>
+	
+	<dt>System requirements</dt>
+	<dd>Detailed description of what the system should do including the 
+software system's functions, services, and operational constraints. The 
+system requirements document (sometimes called a functional 
+specification) should define exactly what is to be implemented. It may 
+be part of the contract between the system buyer and the software 
+developers.</dd>
+</dl>
+
+<p>Three classes of requirements:</p>
+<dl>
+	<dt>Functional requirements</dt>
+	<dd>Statements of services the system should provide, how the system 
+should react to particular inputs and how the system should behave in 
+particular situations.
+May state what the system should not do.</dd>
+
+	<dt>Non-functional requirements</dt>
+	<dd>Constraints on the services or functions offered by the system such
+ as timing constraints, constraints on the development process, 
+standards, etc.
+Often apply to the system as a whole rather than individual features or 
+services.</dd>
+
+	<dt>Domain requirements</dt>
+	<dd>Constraints on the system from the domain of operation.</dd>
+</dl>
+
+
+<div class="Underhead">
+<p>Functional requirements</p></div>
+
+<p>Functional requirements describe <b>functionality</b> or system services.
+They depend on the type of software, expected users and the type of system where the software is used.</p>
+<ul>
+	<li>Functional user requirements may be <b>high-level statements of what the system should do</b>.</li>
+	<li>Functional system requirements should describe the system services in detail.</li>
+</ul>
+
+<p>Problems arise when requirements are not precisely stated.
+Ambiguous requirements may be interpreted in different ways by developers and users. In principle, requirements should be both</p>
+<ul>
+	<li><b>Complete</b>: they should include descriptions of all facilities required, and</li>
+	<li><b>Consistent</b>: there should be no conflicts or contradictions in the descriptions of the system facilities.</li>
+</ul>
+
+<p>In practice, it is impossible to produce a complete and consistent requirements document.</p>
+
+
+
+
+<div class="Underhead">
+<p>Non-functional requirements</p></div>
+
+<p>Non-functional requirements define system properties and constraints 
+e.g. reliability, response time and storage requirements. Constraints 
+are I/O device capability, system representations, etc.
+Process requirements may also be specified mandating a particular IDE, 
+programming language or development method.
+Non-functional requirements may be more critical than functional 
+requirements. If these are not met, the system may be useless.</p>
+
+<p>Non-functional requirements may affect the overall architecture of a 
+system rather than the individual components. 
+A single non-functional requirement, such as a security requirement, may
+ generate a number of related functional requirements that define system
+ services that are required. 
+It may also generate requirements that restrict existing requirements. </p>
+
+<p><img src="Ch4%20Summary_files/04-nonfunctional_requirement_types.png" width="100%"></p>
+
+
+<p>Three classes of non-functional requirements:</p>
+<dl>
+	<dt>Product requirements</dt>
+	<dd>Requirements which specify that the delivered product must behave in a particular way e.g. execution speed, reliability, etc.</dd>
+
+	<dt>Organizational requirements</dt>
+	<dd>Requirements which are a consequence of organizational policies and
+ procedures e.g. process standards used, implementation requirements, 
+etc.</dd>
+
+	<dt>External requirements</dt>
+	<dd>Requirements which arise from factors which are external to the 
+system and its development process e.g. interoperability requirements, 
+legislative requirements, etc.</dd>
+</dl>
+
+
+<p>Non-functional requirements may be very difficult to state precisely 
+and imprecise requirements may be difficult to verify. If they are 
+stated as a <b>goal</b> (a general intention of the user such as ease of use), they should be rewritten as a <b>verifiable</b> non-functional requirement (a statement using some <b>quantifiable metric</b> that can be objectively tested).
+Goals are helpful to developers as they convey the intentions of the system users.</p>
+
+
+
+
+
+<div class="Underhead">
+<p>Domain requirements</p></div>
+
+<p>The system's operational domain imposes requirements on the system.
+Domain requirements may be new functional requirements, constraints on existing requirements or define specific computations.
+If domain requirements are not satisfied, the system may be unworkable. Two main <b>problems</b> with domain requirements:</p>
+<dl>
+	<dt>Understandability</dt>
+	<dd>Requirements are expressed in the language of the application 
+domain, which is not always understood by software engineers developing 
+the system.</dd>
+
+	<dt>Implicitness</dt>
+	<dd>Domain specialists understand the area so well that they do not think of making the domain requirements explicit.</dd>
+</dl>
+
+
+
+
+
+
+<div class="Underhead">
+<p>Requirements engineering process</p></div>
+
+<p>Processes vary widely depending on the application domain, the people involved and the organization developing the requirements.
+In practice, requirements engineering is an <b>iterative process</b>, in which the following generic activities are interleaved:</p>
+<ul>
+	<li>Requirements <b>elicitation</b>;</li>
+	<li>Requirements <b>analysis</b>;</li>
+	<li>Requirements <b>validation</b>;</li>
+	<li>Requirements <b>management</b>.</li>
+</ul>
+
+
+
+<div class="Underhead">
+<p>Requirements elicitation and analysis</p></div>
+
+<p>Software engineers work with a range of system <b>stakeholders</b> to
+ find out about the application domain, the services that the system 
+should provide, the required system performance, hardware constraints, 
+other systems, etc. Stages include:</p>
+<dl>
+	<dt>Requirements discovery</dt>
+	<dd>Interacting with stakeholders to discover their requirements. Domain requirements are also discovered at this stage. </dd>
+
+
+
+	<dt>Requirements classification and organization</dt>
+	<dd>Groups related requirements and organizes them into coherent clusters.</dd>
+
+	<dt>Prioritization and negotiation</dt>
+	<dd>Prioritizing requirements and resolving requirements conflicts.</dd>
+
+	<dt>Requirements specification</dt>
+	<dd>Requirements are documented and input into the next round of the spiral.</dd>
+</dl>
+
+<p>Closed (based on pre-determined list of questions) and open <b>interviews</b> with stakeholders are a part of the RE process. <b> User stories</b> and <b>scenarios</b>
+ are real-life examples of how a system can be used, which are usually 
+easy for stakeholders to understand. Scenarios should include 
+descriptions of the starting situation, normal flow of events, what can 
+go wrong, other concurrent activities, the state of the system when the 
+scenario finishes. </p>
+
+<p><a name="usecasediagrams"><b>Use-cases</b></a> are a scenario-based 
+technique in the UML which identify the actors in an interaction and 
+which describe the interaction itself. A set of use cases should 
+describe all possible interactions with the system.</p>
+
+<p><img src="Ch4%20Summary_files/04-use_case_diagram.png" width="70%"></p>
+
+<p><b>Problems</b> to look for during requirements elicitation and analysis:</p>
+<ul>
+	<li><b>Stakeholders don't know what they really want.</b></li>
+	<li>Stakeholders express requirements in their own terms.</li>
+	<li>Different stakeholders may have conflicting requirements.</li>
+	<li>Organizational and political factors may influence the system requirements.</li>
+	<li>The requirements change during the analysis process. </li>
+	<li>New stakeholders may emerge and the business environment may change.</li>
+</ul>
+
+
+
+
+
+
+
+<div class="Underhead">
+<p>Requirements specification</p></div>
+
+<p>Requirements specification is the process of <b>writing down the user and system requirements</b>
+ in a requirements document.
+User requirements have to be understandable by end-users and customers 
+who do not have a technical background.
+System requirements are more detailed requirements and may include more 
+technical information.
+The requirements may be part of a contract for the system development 
+and it is important that these are as complete as possible.</p>
+
+<p>In principle, requirements should state what the system should do and the design should describe how it does this.
+In practice, <b>requirements and design are inseparable</b>.</p>
+
+<p>User requirements are almost always written in <b>natural language</b>
+ supplemented
+by appropriate diagrams and tables in the requirements document. System 
+requirements may also be written in natural language but other notations
+ based on forms, graphical system models, or mathematical system models 
+can also be used. Natural language is expressive, intuitive and 
+universal. This means that the requirements  can be understood by users 
+and customers.
+</p>
+
+<p><b>Structured natural language</b> is a way of writing system 
+requirements where the freedom of the requirements writer is limited and
+ all requirements are written in a standard way. This approach maintains
+ most of the expressiveness and understand-ability of natural language 
+but ensures that some uniformity is imposed on the specification.</p>
+
+
+
+
+
+
+
+<div class="Underhead">
+<p>Requirements validation</p></div>
+
+<p>Requirements validation is concerned with demonstrating that the requirements define the system that the customer really wants.
+Requirements error costs are high so validation is very important.</p>
+
+<p>What <b>problems</b> to look for:</p>
+<ul>
+	<li><b>Validity</b>: does the system provide the functions which best support the customer's needs?</li>
+	<li><b>Consistency</b>: are there any requirements conflicts?</li>
+	<li><b>Completeness</b>: are all functions required by the customer included?</li>
+	<li><b>Realism</b>: can the requirements be implemented given available budget and technology?</li>
+	<li><b>Verifiability</b>: can the requirements be checked?</li>
+</ul>
+
+<p>Requirements validation <b>techniques</b>:</p>
+<dl>
+	<dt>Requirements reviews</dt>
+	<dd>Systematic manual analysis of the requirements. Regular reviews 
+should be held while the requirements definition is being formulated. 
+What to look for:</dd>
+		<ul>
+			<li><b>Verifiability</b>: is the requirement realistically testable?</li>
+			<li><b>Comprehensibility</b>: is the requirement properly understood?</li>
+			<li><b>Traceability</b>: is the origin of the requirement clearly stated?</li>
+			<li><b>Adaptability</b>: can the requirement be changed without a large impact on other requirements?</li>
+		</ul>
+
+	<dt>Prototyping</dt>
+	<dd>Using an executable model of the system to check requirements. </dd>
+
+	<dt>Test-case generation</dt>
+	<dd>Developing tests for requirements to check testability.</dd>
+</dl>
+
+
+
+
+<div class="Underhead">
+<p>Requirements change</p></div>
+
+<p>Requirements management is the process of managing changing 
+requirements during the requirements engineering process and system 
+development.
+New requirements emerge as a system is being developed and after it has 
+gone into use. Reasons why requirements change after the system's 
+deployment:</p>
+<ul>
+	<li>The business and technical environment of the system always changes after installation. </li>
+	<li>The people who pay for a system and the users of that system are rarely the same people. </li>
+	<li>Large systems usually have a diverse user community, with many 
+users having different requirements and priorities that may be 
+conflicting or contradictory. </li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+</div>
+
+
+</body></html>
