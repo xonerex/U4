@@ -1,3 +1,0 @@
-dig - DNS lookup tool
-host - simple DNS lookup tool for host name to IP address conversions and vice versa
-wireshark
