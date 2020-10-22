@@ -47,8 +47,8 @@ std::string bitsToVars(std::string& bits, std::string& varList);        // conve
     *Note: variables in expression are limited to a single character (ie. AB is two variables, A and B).
     *Note: variables must be alphabetic, limiting this program to a maximum of 26 unique vars.
 
-    Alternative modes input:
-        - func: F(A,B,C,D)=(M1,M2,M3,M6) -> 4 inputs (A,B,C,D) and implicants (minterms) 1=0001, 2=0010, 3=0011, 6=0110
+    Alternative modes of input:
+        - func: F[A,B,C,D]=M[1,2,3,6]+D[0,4] -> 4 inputs (A,B,C,D) and implicants (minterms) 1=0001, 2=0010, 3=0011, 6=0110
         - list: List of implicants -> 0010,1100,1110,0111,1011,etc...
 */
 
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
                 1) input - ie. exp AB+AC+B^C\n\t\
                 2) \"verbose\" - Enable verbose mode\n\t\
                 3) \"generatereport\" - Write reduction report file, ie. generatereport reportFile.txt\n\
-            Usage: qm AB+AC+bC verbose generatereport outputfile.txt\n\
+            Usage: qm exp AB+AC+bC verbose generatereport outputfile.txt\n\
             *Note: boolean expression must be provided as the first argument\n\
             *Note: variables in expression are limited to a single alphabetic character (ie. AB is two variables, A and B)\n\n\
             Expression syntax:\n\t\
@@ -84,9 +84,12 @@ int main(int argc, char* argv[]) {
     if (inputMode != "exp" && inputMode != "list" && inputMode != "func") {
         std::cerr << "Invalid Input Mode.\n\
             Valid modes of input are:\n\t\
-                1) exp  - Input is expressed as a boolean expression, ie. qm exp AB+AC+B^C\n\t\
-                2) list - Input is expressed as a list of implicants, ie. qm list 0010,1100,1110,1011,etc...\n\t\
-                3) func - Input is expressed as a function, ie. qm func F(A,B,C,D)=(M1,M2,M3,M6)\n";
+                1) exp  - Input is expressed as a boolean expression, ie. qm exp AB+AC+bC verbose\n\t\
+                2) list - Input is expressed as a list of implicants, ie. qm list 0010,1100,1110,1011,etc... verbose\n\t\
+                3) func - Input is expressed as a function, ie. qm func F[A,B,C,D]=M[1,2,3,6](+D[0,4]) verbose\n\
+                Where, 'F[...]' are the variable labels within the equation.\n\
+                \t'M[...]' are the Minterms that represent implicants.\n\
+                \t'D[...]' are the Minterms that correspond to 'dont care' outputs. [Optional]";
         return -1;
     }
 
@@ -107,8 +110,8 @@ int main(int argc, char* argv[]) {
                 Valid arguments are:\n\t\
                     1) A boolean expression - ie. AB+AC+B^C\n\t\
                     2) \"verbose\" - Enable verbose mode\n\t\
-                    3) \"generatereport\" - Write reduction report file, ie. generatereport reportFile.txt\n\
-                Usage: qm AB+AC+bC verbose generatereport outputfile.txt\n\
+                    3) \"generatereport\" - Write reduction report file, ie. generatereport reportFile.txt [Unimplemented]\n\
+                Usage: qm exp AB+AC+bC verbose generatereport outputfile.txt\n\
                 *Note: boolean expression must be provided as the first argument\n\
                 *Note: variables in expression are limited to a single alphabetic character (ie. AB is two variables, A and B)\n\n\
                 Expression syntax:\n\t\
@@ -209,16 +212,137 @@ int main(int argc, char* argv[]) {
         numvars = 0;
         varList = "";
         cnt = 0;
+        int funcInputType = 0;          // [0 = none (waiting for type identifier), 1 = var labels, 2 = implicants, 3 = dont care minterms]
+        bool expectDelimeter = false;   // ensure vals are correctly delimited
+        std::set<char> vars;
+        char tmp;
+        int maxMintermVal = 0;
+        int num = 0;
 
         for (char c : expression) {
-            if (cnt == 0 && c != 'F') {
-                std::cerr << "Invalid Function Format. Function must begin with 'F'. '" << c << "' Found Instead.\n";
-                return -1;
+            if (c == '[') {
+                expectDelimeter = false;
+                cnt++;
+                continue;
             }
-            else if (cnt == 1 && c != '(') {
-                std::cerr << "Invalid Function Format. Expected token '('. '" << c << "' Found Instead.\n";
-                return -1;
+            if (c == ']') {
+                if (funcInputType != 1) {
+                    if (num > maxMintermVal) {
+                        std::cerr << "Invalid Minterm. '" << num << "' cannot be represented in " << numvars << " variables.\n";
+                        return -1;
+                    }
+                    bits = std::bitset<MAXBITS>(num).to_string();           // convert i value to binary representation as string padded to max bits
+                    bits = bits.substr((MAXBITS - numvars), MAXBITS);       // trim padding
+                    if (verbose) std::cout << "Identified minterm ";
+                    implicants.push_back(bits);
+                    if (funcInputType == 2) {
+                        if (verbose) std::cout << " [Implicant]: ";
+                        implicants_orig.push_back(bits);
+                    }
+                    else if (verbose) std::cout << " [Dont Care]: ";
+                    if (verbose) std::cout << num << " --> " << bits << std::endl;
+                    num = 0;
+                }
+                funcInputType = 0;
+                cnt++;
+                continue;
             }
+            if (c == '=' || c == '+') {
+                cnt++;
+                continue;
+            }
+            if (funcInputType == 0) {   // if waiting for function input type identifier, attempt to parse for it
+                switch (toupper(c)) {
+                    case 'F': 
+                        funcInputType = 1;
+                        break;
+                    case 'M':
+                        funcInputType = 2;
+                        break;
+                    case 'D':
+                        funcInputType = 3;
+                        break;
+                    default:
+                        std::cerr << "Invalid function format. Expected valid input type identifier (F/M/D). Found '" << c << "' at index " << cnt << " instead\n";
+                        return -1;
+                }
+                cnt++;
+                continue;   // advance to next char
+            }
+            if (funcInputType == 1) {   // parse var labels 
+                if (expectDelimeter) {
+                    expectDelimeter = false;
+                    if (c == ',') {
+                        cnt++;
+                        continue;
+                    }
+                    std::cerr << "Invalid function format. Expected list delimeter ','. Found '" << c << "' at index " << cnt << " instead\n";
+                    return -1;
+                }
+                else {
+                    if (isalpha(c)) {
+                        tmp = toupper(c);
+                        if (vars.find(tmp) != vars.end()) {     // check for duplicate var labels 
+                            std::cerr << "Duplicate variable label found at index " << cnt << ". '" << tmp << "' is already in use.\n";
+                            return -1;
+                        }
+                        if (verbose) std::cout << "Identified variable label " << tmp << std::endl;
+                        varList += tmp;
+                        numvars++;
+                        maxMintermVal = pow(2, numvars) - 1;    // Greatest integer value (unsigned) representable in current number of variables
+                        expectDelimeter = true;
+                    }
+                    else {
+                        std::cerr << "Invalid function format. Expected alphabetic variable label. Found token '" << c << "' at index " << cnt << " instead\n";
+                        return -1;
+                    }
+                }
+            }
+            else if (funcInputType == 2 || funcInputType == 3) {  // parse minterms
+                if (c == ',') {     // delimeter -> finished parsing current value. validate, push to lists, then reset
+                    if (!expectDelimeter) {
+                        std::cerr << "Invalid function format. Expected numeric minterm digit. Found token '" << c << "' at index " << cnt << " instead\n";
+                        return -1;
+                    }
+                    if (num > maxMintermVal) {
+                        std::cerr << "Invalid Minterm. '" << num << "' cannot be represented in " << numvars << " variables.\n";
+                        return -1;
+                    }
+                    bits = std::bitset<MAXBITS>(num).to_string();           // convert i value to binary representation as string padded to max bits
+                    bits = bits.substr((MAXBITS - numvars), MAXBITS);       // trim padding
+                    if (verbose) std::cout << "Minterm identified ";
+                    implicants.push_back(bits);
+                    if (funcInputType == 2) {
+                        if (verbose) std::cout << " [Implicant]: ";
+                        implicants_orig.push_back(bits);
+                    }
+                    else if (verbose) std::cout << " [Dont Care]: ";
+                    if (verbose) std::cout << num << " --> " << bits << std::endl;
+                    num = 0;
+                    expectDelimeter = false;
+                    cnt++;
+                    continue;     
+                }
+                else if (isdigit(c)) {
+                    num *= 10;
+                    num += ((int)c - (int)'0');
+                    expectDelimeter = true;
+                }
+                else {
+                    std::cerr << "Invalid function format. Expected numeric minterm digit. Found token '" << c << "' at index " << cnt << " instead\n";
+                    return -1;
+                }
+            }
+            cnt++;
+        }
+        vars.erase(vars.begin(), vars.end());
+        if (numvars < 1) {
+            std::cerr << "Invalid function format. Function must have at least one variable.\n";
+            return -1;
+        }
+        if (implicants_orig.size() < 1) {
+            std::cerr << "Invalid function format. Function must have at least one implicant.\n";
+            return -1;
         }
         goto step3;
     }
@@ -380,7 +504,7 @@ int main(int argc, char* argv[]) {
         impTable.erase(impTable.begin(), impTable.end());           // empty implicant table for next iteration
         if (verbose) {
             std::cout << '\n' << passNum;
-            std::cout << (passNum == 1 ? "st" : (passNum == 2 ? "nd" : (passNum == 3 ? "rd" : "th")));
+            std::cout << (passNum == 1 ? "st" : (passNum == 2 ? "nd" : (passNum == 3 ? "rd" : "th")));      // **Will generate accurate results up until pass # 20
             std::cout << " Pass:" << std::endl;
             passNum++;
         }
@@ -392,7 +516,7 @@ int main(int argc, char* argv[]) {
         std::cout << std::endl;
     }
 
-    // 4) Generate output table
+    // 4) Generate cover table
     //      Place Prime implicants along y-axis, initial implicants along x-axis
     //      Compare each original implicant against each prime implicant. 
     //      If the prime implicant successfully describes the implicant (taking into account 
@@ -405,7 +529,7 @@ int main(int argc, char* argv[]) {
     if (verbose)
     {
         // Write headers
-        std::cout << "\nOutput Table:\n";
+        std::cout << "\nCover Table:\n";
         for (int i=0; i < (numvars+2); i++) cellSpaces += ' ';
         std::cout << "|" << cellSpaces << "|";
         for (int i=0; i < implicants_orig.size(); i++) {
@@ -418,7 +542,7 @@ int main(int argc, char* argv[]) {
     tmp.push_back(0);
     for (auto imp : implicants_orig) columnCntMap[imp] = tmp;
 
-    // construct output table
+    // construct cover table
     for (int p=0; p < primes.size(); p++) {         // iterate each prime implicant to construct table
         prime = primes[p];
         if (verbose) std::cout << "| " << prime << " |";
@@ -437,7 +561,7 @@ int main(int argc, char* argv[]) {
     }
 
     // check counts for each original implicant
-    if (verbose) std::cout << "\nPrime implicants required for minimal cover: ";
+    if (verbose) std::cout << "\nEssential Prime Implicants required for minimal cover: ";
     for (auto imp : implicants_orig) {
         if (columnCntMap.at(imp)[0] == 1) {     // if there is a single checkmark in column, add corr. prime implicant to minCover set
             prime = primes[columnCntMap.at(imp)[1]];
@@ -532,8 +656,8 @@ std::string bitsToVars(std::string& bits, std::string& varList) {
     std::string result = "";
     for (int i=0; i < bits.length(); i++) {
         if (bits[i] == '-') continue;       // pass vars corr. to dont care states
-        if (bits[i] == '1') result = varList[i] + result;
-        else result = char(tolower(varList[i])) + result;
+        if (bits[i] == '1') result = result + varList[i];
+        else result = result + char(tolower(varList[i]));
     }
     return result;
 }

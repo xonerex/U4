@@ -1,0 +1,13 @@
+marking
+1   = correct binary conversion
+	0.5 = whole #
+	0.5 = fraction
+1   = correct normalized form
+	0.5 = correct values
+	0.5 = correct form (coefficient x base ^ exponent)
+1.5 = correct mantissa
+	0.5 = length
+	0.5 = leave out implicit 1
+	0.5 = correct values
+1   = correct exponent
+0.5 = sign bit

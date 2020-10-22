@@ -1,0 +1,264 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+<title>CS 410/510 - Software Engineering class notes</title>
+<link rel="stylesheet" type="text/css" href="Ch5%20Summary_files/notes.css">
+</head>
+
+<body>
+
+<div class="SimpleTitle">
+
+<p>CS 410/510 - Software Engineering</p>
+<p>System Modeling</p>
+
+</div>
+
+<div class="Content">
+
+<p>Reference: Sommerville, Software Engineering, 10 ed., Chapter 5</p>
+
+
+<div class="Underhead">
+<p>The big picture</p></div>
+
+<p><b>System modeling</b> is the process of developing abstract models 
+of a system, with each model presenting a different view or perspective 
+of that system. 
+It is about representing a system using some kind of graphical notation,
+ which is now almost always based on notations in the <b>Unified Modeling Language</b> (<b>UML</b>). Models help the analyst to understand the functionality of the system; they are used to communicate with customers.</p>
+
+<p>Models can explain the system from <b>different perspectives</b>:</p>
+<ul>
+	<li>An <b>external</b> perspective, where you model the context or environment of the system.</li>
+	<li>An <b>interaction</b> perspective, where you model the interactions between a system and its environment, or between the components of a system.</li>
+	<li>A <b>structural</b> perspective, where you model the organization of a system or the structure of the data that is processed by the system.</li>
+	<li>A <b>behavioral</b> perspective, where you model the dynamic behavior of the system and how it responds to events. </li>
+</ul>
+
+
+<p>Five types of UML diagrams that are the most useful for system modeling:</p>
+<ul>
+	<li><b>Activity</b> diagrams, which show the activities involved in a process or in data processing.</li>
+	<li><b>Use case</b> diagrams, which show the interactions between a system and its environment. </li>
+	<li><b>Sequence</b> diagrams, which show interactions between actors and the system and between system components.</li>
+	<li><b>Class</b> diagrams, which show the object classes in the system and the associations between these classes.</li>
+	<li><b>State</b> diagrams, which show how the system reacts to internal and external events. </li>
+</ul>
+
+<p>Models of both new and existing system are used during <b>requirements engineering</b>. Models of the <b>existing systems</b>
+ help clarify what the existing system does and can be used as a basis 
+for discussing its strengths and weaknesses. These then lead to 
+requirements for the new system.
+Models of the <b>new system</b> are used during requirements engineering
+ to help explain the proposed requirements to other system stakeholders.
+ Engineers use these models to discuss design proposals and to document 
+the system for implementation. </p>
+
+
+
+
+
+<div class="Underhead">
+<p>Context and process models</p></div>
+
+<p><b>Context models</b> are used to illustrate the operational context of a system - they show what lies outside the system boundaries.
+Social and organizational concerns may affect the decision on where to position system boundaries.
+Architectural models show the system and its relationship with other systems.</p>
+
+<p><b>System boundaries</b> are established to define what is inside and
+ what is outside the system.
+They show other systems that are used or depend on the system being 
+developed.
+The position of the system boundary has a profound effect on the system 
+requirements. 
+Defining a system boundary is a political judgment since there may be 
+pressures to develop system boundaries that increase/decrease the 
+influence or workload of different parts of an organization.</p>
+
+<p>Context models simply show the other systems in the environment, not how the system being developed is used in that environment.
+<b>Process models</b> reveal how the system being developed is used in broader business processes.
+UML activity diagrams may be used to define business process models.</p>
+
+<p>The example below shows a UML <b>activity diagram</b> describing the process of involuntary detention and the role of MHC-PMS (mental healthcare patient management system) in it.</p>
+
+<p>
+<img src="Ch5%20Summary_files/05-activity_diagram_involuntary_detention.png" width="100%"></p>
+
+
+
+
+
+
+<div class="Underhead">
+<p>Interaction models</p></div>
+
+<p>Types of interactions that can be represented in a model:</p>
+<ul>
+    <li>Modeling <b>user interaction</b> is important as it helps to identify user requirements. </li>
+    <li>Modeling <b>system-to-system interaction</b> highlights the communication problems that may arise. </li>
+    <li>Modeling <b>component interaction</b> helps us understand if a proposed system structure is likely to deliver the required system performance and dependability. </li>
+</ul>
+
+
+<p><b>Use cases</b> were developed originally to support requirements 
+elicitation and now incorporated into the UML.
+Each use case represents a discrete task that involves external 
+interaction with a system.
+Actors in a use case may be people or other systems. Use cases can be 
+represented using a UML use case diagram and in a more detailed 
+textual/tabular format.</p>
+
+<p><a name="usecase_simple">Simple use case diagram:</a></p>
+
+<p><img src="Ch5%20Summary_files/05-simple_UC_diagram.png" width="60%"></p>
+
+<p><a name="usecase_table">Use case description in a tabular format:</a></p>
+<div style="padding-left:30px;">
+<table>
+    <tbody><tr>
+        <td>Use case title</td>
+        <td>Transfer data</td>
+    </tr>
+    <tr>
+        <td>Description</td>
+        <td>A receptionist may transfer data from the MHC-PMS to a 
+general patient record database that is maintained by a health 
+authority. The information transferred may either be updated personal 
+information (address, phone number, etc.) or a summary of the patient's 
+diagnosis and treatment.</td>
+    </tr>
+    <tr>
+        <td>Actor(s)</td>
+        <td>Medical receptionist, patient records system (PRS)</td>
+    </tr>
+    <tr>
+        <td>Preconditions</td>
+        <td>Patient data has been collected (personal information, treatment summary); <br>
+        The receptionist must have appropriate security permissions to access the patient information and the PRS.</td>
+    </tr>
+    <tr>
+        <td>Postconditions</td>
+        <td>PRS has been updated</td>
+    </tr>
+    <tr>
+        <td>Main success scenario</td>
+        <td>1. Receptionist selects the "Transfer data" option from the menu.<br>
+            2. PRS verifies the security credentials of the receptionist.<br>
+            3. Data is transferred.<br>
+            4. PRS has been updated.
+        </td>
+    </tr>
+    <tr>
+        <td>Extensions</td>
+        <td>2a. The receptionist does not have the necessary security credentials.<br>
+            2a.1. An error message is displayed.<br>
+            2a.2. The receptionist backs out of the use case.
+        </td>
+    </tr>
+</tbody></table>
+</div>
+
+
+<p>UML <a name="sequencediagram"><b>sequence diagrams</b></a> are used to model the interactions between the actors and the objects within a system.
+A sequence diagram shows the sequence of interactions that take place during a particular use case or use case instance.
+The objects and actors involved are listed along the top of the diagram, with a dotted line drawn vertically from these. 
+Interactions between objects are indicated by annotated arrows.  </p>
+
+<p><img src="Ch5%20Summary_files/05-simple_activity_diagram.png" width="75%"></p>
+
+
+
+
+
+
+
+
+<div class="Underhead">
+<p>Structural models</p></div>
+
+<p><b>Structural models</b> of software display the organization of a system in terms of the components that make up that system and their relationships. 
+Structural models may be <b>static</b> models, which show the structure of the system design, or <b>dynamic</b> models, which show the organization of the system when it is executing. 
+You create structural models of a system when you are discussing and designing the system architecture. </p>
+
+<p>UML <b>class diagrams</b> are used when developing an object-oriented
+ system model to show the classes in a system and the associations 
+between these classes. 
+An object class can be thought of as a general definition of one kind of
+ system object. 
+An association is a link between classes that indicates that there is 
+some relationship between these classes. 
+When you are developing models during the early stages of the software 
+engineering process, objects represent something in the real world, such
+ as a patient, a prescription, doctor, etc. </p>
+
+<p><img src="Ch5%20Summary_files/05-class_diagram.png" width="60%">
+<img src="Ch5%20Summary_files/05-class_diagram_consultation.png" style="float:right;" width="24%">
+</p>
+
+<p><b>Generalization</b> is an everyday technique that we use to manage complexity. 
+In modeling systems, it is often useful to examine the classes in a system to see if there is scope for generalization. 
+In object-oriented languages, such as Java, generalization is implemented using the class <b>inheritance</b>
+ mechanisms built into the language. 
+In a generalization, the attributes and operations associated with 
+higher-level classes are also associated with the lower-level classes.
+ The lower-level classes are subclasses inherit the attributes and 
+operations from their superclasses. These lower-level classes then add 
+more specific attributes and operations. </p>
+
+<p><img src="Ch5%20Summary_files/05-class_diagram_generalization.png" width="45%"></p>
+
+<p>An <b>aggregation</b> model shows how classes that are collections are composed of other classes.
+Aggregation models are similar to the part-of relationship in semantic data models. </p>
+
+<p><img src="Ch5%20Summary_files/05-class_diagram_aggregation.png" width="30%"></p>
+
+
+
+
+
+
+
+<div class="Underhead">
+<p>Behavioral models</p></div>
+
+<p><b>Behavioral models</b> are models of the dynamic behavior of a 
+system as it is executing. They show what happens or what is supposed to
+ happen when a system responds to a stimulus from its environment. 
+Two types of stimuli:</p>
+<ul>
+    <li>Some <b>data</b> arrives that has to be processed by the system.</li>
+    <li>Some <b>event</b> happens that triggers system processing. Events may have associated data, although this is not always the case.</li>
+</ul>
+
+<p>Many business systems are data-processing systems that are primarily 
+driven by data. They are controlled by the data input to the system, 
+with relatively little external event processing. 
+<b>Data-driven models</b> show the sequence of actions involved in 
+processing input data and generating an associated output. 
+They are particularly useful during the analysis of requirements as they
+ can be used to show end-to-end processing in a system. Data-driven 
+models can be created using UML <b>activity diagrams</b>:</p>
+
+<p><img src="Ch5%20Summary_files/05-behavioral_model_activity_diagram.png" width="90%"></p>
+
+<p>Data-driven models can also be created using UML  <b>sequence diagrams</b>:</p>
+
+<p><img src="Ch5%20Summary_files/05-behavioral_model_sequence_diagram.png" style="margin-bottom:-70px;" width="80%"></p>
+
+<p>Real-time systems are often event-driven, with minimal data 
+processing. For example, a landline phone switching system responds to 
+events such as 'receiver off hook' by generating a dial tone. 
+<b>Event-driven models</b> shows how a system responds to external and 
+internal events. 
+It is based on the assumption that a system has a finite number of 
+states and that events (stimuli) may cause a transition from one state 
+to another. Event-driven models can be created using UML <b>state diagrams</b>:</p><p></p>
+
+<p><img src="Ch5%20Summary_files/05-state_diagram.png" width="100%"></p>
+
+
+
+</div>
+
+
+</body></html>
